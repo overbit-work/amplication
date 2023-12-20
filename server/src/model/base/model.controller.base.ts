@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { ModelService } from "../model.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { ModelCreateInput } from "./ModelCreateInput";
 import { Model } from "./Model";
 import { ModelFindManyArgs } from "./ModelFindManyArgs";
@@ -26,10 +30,24 @@ import { TemplateFindManyArgs } from "../../template/base/TemplateFindManyArgs";
 import { Template } from "../../template/base/Template";
 import { TemplateWhereUniqueInput } from "../../template/base/TemplateWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class ModelControllerBase {
-  constructor(protected readonly service: ModelService) {}
+  constructor(
+    protected readonly service: ModelService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Model })
+  @nestAccessControl.UseRoles({
+    resource: "Model",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createModel(@common.Body() data: ModelCreateInput): Promise<Model> {
     return await this.service.createModel({
       data: data,
@@ -42,9 +60,18 @@ export class ModelControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Model] })
   @ApiNestedQuery(ModelFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Model",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async models(@common.Req() request: Request): Promise<Model[]> {
     const args = plainToClass(ModelFindManyArgs, request.query);
     return this.service.models({
@@ -58,9 +85,18 @@ export class ModelControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Model })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Model",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async model(
     @common.Param() params: ModelWhereUniqueInput
   ): Promise<Model | null> {
@@ -81,9 +117,18 @@ export class ModelControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Model })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Model",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateModel(
     @common.Param() params: ModelWhereUniqueInput,
     @common.Body() data: ModelUpdateInput
@@ -112,6 +157,14 @@ export class ModelControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Model })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Model",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteModel(
     @common.Param() params: ModelWhereUniqueInput
   ): Promise<Model | null> {
@@ -135,8 +188,14 @@ export class ModelControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/templates")
   @ApiNestedQuery(TemplateFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "read",
+    possession: "any",
+  })
   async findTemplates(
     @common.Req() request: Request,
     @common.Param() params: ModelWhereUniqueInput
@@ -168,6 +227,11 @@ export class ModelControllerBase {
   }
 
   @common.Post("/:id/templates")
+  @nestAccessControl.UseRoles({
+    resource: "Model",
+    action: "update",
+    possession: "any",
+  })
   async connectTemplates(
     @common.Param() params: ModelWhereUniqueInput,
     @common.Body() body: TemplateWhereUniqueInput[]
@@ -185,6 +249,11 @@ export class ModelControllerBase {
   }
 
   @common.Patch("/:id/templates")
+  @nestAccessControl.UseRoles({
+    resource: "Model",
+    action: "update",
+    possession: "any",
+  })
   async updateTemplates(
     @common.Param() params: ModelWhereUniqueInput,
     @common.Body() body: TemplateWhereUniqueInput[]
@@ -202,6 +271,11 @@ export class ModelControllerBase {
   }
 
   @common.Delete("/:id/templates")
+  @nestAccessControl.UseRoles({
+    resource: "Model",
+    action: "update",
+    possession: "any",
+  })
   async disconnectTemplates(
     @common.Param() params: ModelWhereUniqueInput,
     @common.Body() body: TemplateWhereUniqueInput[]

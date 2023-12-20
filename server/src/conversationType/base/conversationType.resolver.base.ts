@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { ConversationType } from "./ConversationType";
 import { ConversationTypeCountArgs } from "./ConversationTypeCountArgs";
 import { ConversationTypeFindManyArgs } from "./ConversationTypeFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateConversationTypeArgs } from "./UpdateConversationTypeArgs";
 import { DeleteConversationTypeArgs } from "./DeleteConversationTypeArgs";
 import { Template } from "../../template/base/Template";
 import { ConversationTypeService } from "../conversationType.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => ConversationType)
 export class ConversationTypeResolverBase {
-  constructor(protected readonly service: ConversationTypeService) {}
+  constructor(
+    protected readonly service: ConversationTypeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "read",
+    possession: "any",
+  })
   async _conversationTypesMeta(
     @graphql.Args() args: ConversationTypeCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class ConversationTypeResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [ConversationType])
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "read",
+    possession: "any",
+  })
   async conversationTypes(
     @graphql.Args() args: ConversationTypeFindManyArgs
   ): Promise<ConversationType[]> {
     return this.service.conversationTypes(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => ConversationType, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "read",
+    possession: "own",
+  })
   async conversationType(
     @graphql.Args() args: ConversationTypeFindUniqueArgs
   ): Promise<ConversationType | null> {
@@ -53,7 +81,13 @@ export class ConversationTypeResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => ConversationType)
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "create",
+    possession: "any",
+  })
   async createConversationType(
     @graphql.Args() args: CreateConversationTypeArgs
   ): Promise<ConversationType> {
@@ -71,7 +105,13 @@ export class ConversationTypeResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => ConversationType)
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "update",
+    possession: "any",
+  })
   async updateConversationType(
     @graphql.Args() args: UpdateConversationTypeArgs
   ): Promise<ConversationType | null> {
@@ -99,6 +139,11 @@ export class ConversationTypeResolverBase {
   }
 
   @graphql.Mutation(() => ConversationType)
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "delete",
+    possession: "any",
+  })
   async deleteConversationType(
     @graphql.Args() args: DeleteConversationTypeArgs
   ): Promise<ConversationType | null> {
@@ -114,9 +159,15 @@ export class ConversationTypeResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Template, {
     nullable: true,
     name: "template",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "read",
+    possession: "any",
   })
   async getTemplate(
     @graphql.Parent() parent: ConversationType

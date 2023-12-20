@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Template } from "./Template";
 import { TemplateCountArgs } from "./TemplateCountArgs";
 import { TemplateFindManyArgs } from "./TemplateFindManyArgs";
@@ -26,10 +32,20 @@ import { ConversationTypeFindManyArgs } from "../../conversationType/base/Conver
 import { ConversationType } from "../../conversationType/base/ConversationType";
 import { Model } from "../../model/base/Model";
 import { TemplateService } from "../template.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Template)
 export class TemplateResolverBase {
-  constructor(protected readonly service: TemplateService) {}
+  constructor(
+    protected readonly service: TemplateService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "read",
+    possession: "any",
+  })
   async _templatesMeta(
     @graphql.Args() args: TemplateCountArgs
   ): Promise<MetaQueryPayload> {
@@ -39,14 +55,26 @@ export class TemplateResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Template])
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "read",
+    possession: "any",
+  })
   async templates(
     @graphql.Args() args: TemplateFindManyArgs
   ): Promise<Template[]> {
     return this.service.templates(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Template, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "read",
+    possession: "own",
+  })
   async template(
     @graphql.Args() args: TemplateFindUniqueArgs
   ): Promise<Template | null> {
@@ -57,7 +85,13 @@ export class TemplateResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Template)
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "create",
+    possession: "any",
+  })
   async createTemplate(
     @graphql.Args() args: CreateTemplateArgs
   ): Promise<Template> {
@@ -73,7 +107,13 @@ export class TemplateResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Template)
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "update",
+    possession: "any",
+  })
   async updateTemplate(
     @graphql.Args() args: UpdateTemplateArgs
   ): Promise<Template | null> {
@@ -99,6 +139,11 @@ export class TemplateResolverBase {
   }
 
   @graphql.Mutation(() => Template)
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "delete",
+    possession: "any",
+  })
   async deleteTemplate(
     @graphql.Args() args: DeleteTemplateArgs
   ): Promise<Template | null> {
@@ -114,7 +159,13 @@ export class TemplateResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Message], { name: "messages" })
+  @nestAccessControl.UseRoles({
+    resource: "Message",
+    action: "read",
+    possession: "any",
+  })
   async findMessages(
     @graphql.Parent() parent: Template,
     @graphql.Args() args: MessageFindManyArgs
@@ -128,7 +179,13 @@ export class TemplateResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [ConversationType], { name: "messageTypes" })
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "read",
+    possession: "any",
+  })
   async findMessageTypes(
     @graphql.Parent() parent: Template,
     @graphql.Args() args: ConversationTypeFindManyArgs
@@ -142,9 +199,15 @@ export class TemplateResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Model, {
     nullable: true,
     name: "model",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Model",
+    action: "read",
+    possession: "any",
   })
   async getModel(@graphql.Parent() parent: Template): Promise<Model | null> {
     const result = await this.service.getModel(parent.id);

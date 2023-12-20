@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { ConversationTypeService } from "../conversationType.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { ConversationTypeCreateInput } from "./ConversationTypeCreateInput";
 import { ConversationType } from "./ConversationType";
 import { ConversationTypeFindManyArgs } from "./ConversationTypeFindManyArgs";
 import { ConversationTypeWhereUniqueInput } from "./ConversationTypeWhereUniqueInput";
 import { ConversationTypeUpdateInput } from "./ConversationTypeUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class ConversationTypeControllerBase {
-  constructor(protected readonly service: ConversationTypeService) {}
+  constructor(
+    protected readonly service: ConversationTypeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: ConversationType })
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createConversationType(
     @common.Body() data: ConversationTypeCreateInput
   ): Promise<ConversationType> {
@@ -56,9 +74,18 @@ export class ConversationTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [ConversationType] })
   @ApiNestedQuery(ConversationTypeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async conversationTypes(
     @common.Req() request: Request
   ): Promise<ConversationType[]> {
@@ -81,9 +108,18 @@ export class ConversationTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: ConversationType })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async conversationType(
     @common.Param() params: ConversationTypeWhereUniqueInput
   ): Promise<ConversationType | null> {
@@ -111,9 +147,18 @@ export class ConversationTypeControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: ConversationType })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateConversationType(
     @common.Param() params: ConversationTypeWhereUniqueInput,
     @common.Body() data: ConversationTypeUpdateInput
@@ -157,6 +202,14 @@ export class ConversationTypeControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: ConversationType })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteConversationType(
     @common.Param() params: ConversationTypeWhereUniqueInput
   ): Promise<ConversationType | null> {

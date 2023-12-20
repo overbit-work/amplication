@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { TemplateService } from "../template.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { TemplateCreateInput } from "./TemplateCreateInput";
 import { Template } from "./Template";
 import { TemplateFindManyArgs } from "./TemplateFindManyArgs";
@@ -29,10 +33,24 @@ import { ConversationTypeFindManyArgs } from "../../conversationType/base/Conver
 import { ConversationType } from "../../conversationType/base/ConversationType";
 import { ConversationTypeWhereUniqueInput } from "../../conversationType/base/ConversationTypeWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class TemplateControllerBase {
-  constructor(protected readonly service: TemplateService) {}
+  constructor(
+    protected readonly service: TemplateService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Template })
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createTemplate(
     @common.Body() data: TemplateCreateInput
   ): Promise<Template> {
@@ -61,9 +79,18 @@ export class TemplateControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Template] })
   @ApiNestedQuery(TemplateFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async templates(@common.Req() request: Request): Promise<Template[]> {
     const args = plainToClass(TemplateFindManyArgs, request.query);
     return this.service.templates({
@@ -85,9 +112,18 @@ export class TemplateControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Template })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async template(
     @common.Param() params: TemplateWhereUniqueInput
   ): Promise<Template | null> {
@@ -116,9 +152,18 @@ export class TemplateControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Template })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateTemplate(
     @common.Param() params: TemplateWhereUniqueInput,
     @common.Body() data: TemplateUpdateInput
@@ -161,6 +206,14 @@ export class TemplateControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Template })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteTemplate(
     @common.Param() params: TemplateWhereUniqueInput
   ): Promise<Template | null> {
@@ -192,8 +245,14 @@ export class TemplateControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/messages")
   @ApiNestedQuery(MessageFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Message",
+    action: "read",
+    possession: "any",
+  })
   async findMessages(
     @common.Req() request: Request,
     @common.Param() params: TemplateWhereUniqueInput
@@ -226,6 +285,11 @@ export class TemplateControllerBase {
   }
 
   @common.Post("/:id/messages")
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "update",
+    possession: "any",
+  })
   async connectMessages(
     @common.Param() params: TemplateWhereUniqueInput,
     @common.Body() body: MessageWhereUniqueInput[]
@@ -243,6 +307,11 @@ export class TemplateControllerBase {
   }
 
   @common.Patch("/:id/messages")
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "update",
+    possession: "any",
+  })
   async updateMessages(
     @common.Param() params: TemplateWhereUniqueInput,
     @common.Body() body: MessageWhereUniqueInput[]
@@ -260,6 +329,11 @@ export class TemplateControllerBase {
   }
 
   @common.Delete("/:id/messages")
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "update",
+    possession: "any",
+  })
   async disconnectMessages(
     @common.Param() params: TemplateWhereUniqueInput,
     @common.Body() body: MessageWhereUniqueInput[]
@@ -276,8 +350,14 @@ export class TemplateControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/messageTypes")
   @ApiNestedQuery(ConversationTypeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "ConversationType",
+    action: "read",
+    possession: "any",
+  })
   async findMessageTypes(
     @common.Req() request: Request,
     @common.Param() params: TemplateWhereUniqueInput
@@ -308,6 +388,11 @@ export class TemplateControllerBase {
   }
 
   @common.Post("/:id/messageTypes")
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "update",
+    possession: "any",
+  })
   async connectMessageTypes(
     @common.Param() params: TemplateWhereUniqueInput,
     @common.Body() body: ConversationTypeWhereUniqueInput[]
@@ -325,6 +410,11 @@ export class TemplateControllerBase {
   }
 
   @common.Patch("/:id/messageTypes")
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "update",
+    possession: "any",
+  })
   async updateMessageTypes(
     @common.Param() params: TemplateWhereUniqueInput,
     @common.Body() body: ConversationTypeWhereUniqueInput[]
@@ -342,6 +432,11 @@ export class TemplateControllerBase {
   }
 
   @common.Delete("/:id/messageTypes")
+  @nestAccessControl.UseRoles({
+    resource: "Template",
+    action: "update",
+    possession: "any",
+  })
   async disconnectMessageTypes(
     @common.Param() params: TemplateWhereUniqueInput,
     @common.Body() body: ConversationTypeWhereUniqueInput[]

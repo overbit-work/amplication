@@ -5,6 +5,7 @@ import { JsonFilter } from "../../util/JsonFilter";
 
 export type UserWhereInput = {
   createdAt?: DateTimeFilter;
+  email?: StringNullableFilter;
   firstName?: StringNullableFilter;
   id?: StringFilter;
   lastName?: StringNullableFilter;
